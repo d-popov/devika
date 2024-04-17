@@ -1,62 +1,79 @@
 <script>
-  import { sendMessage, executeAgent, API_BASE_URL } from "$lib/api";
+  import { socket } from "$lib/api";
   import { agentState, messages } from "$lib/store";
+  import { calculateTokens } from "$lib/token";
+  import { Icons } from "../icons";
 
   let isAgentActive = false;
 
   if ($agentState !== null) {
     isAgentActive = $agentState.agent_is_active;
-    console.log("Agent is active", isAgentActive);
   }
 
   let messageInput = "";
   async function handleSendMessage() {
     const projectName = localStorage.getItem("selectedProject");
+    const selectedModel = localStorage.getItem("selectedModel");
+    const serachEngine = localStorage.getItem("selectedSearchEngine");
 
     if (!projectName) {
       alert("Please select a project first!");
       return;
     }
+    if (!selectedModel) {
+      alert("Please select a model first!");
+      return;
+    }
 
     if (messageInput.trim() !== "" && !isAgentActive) {
       if ($messages.length === 0) {
-        console.log("Executing agent", messageInput);
-        await executeAgent(messageInput);
+        socket.emit("user-message", { 
+          action: "execute_agent",
+          message: messageInput,
+          base_model: selectedModel,
+          project_name: projectName,
+          search_engine: serachEngine,
+        });
       } else {
-        console.log("Sending message", messageInput);
-        await sendMessage(messageInput);
+        socket.emit("user-message", { 
+          action: "continue",
+          message: messageInput,
+          base_model: selectedModel,
+          project_name: projectName,
+          search_engine: serachEngine,
+        });
       }
       messageInput = "";
     }
   }
 
-  function calculateTokens(event) {
+  function setTokenSize(event) {
     const prompt = event.target.value;
-    fetch(`${API_BASE_URL}/api/calculate-tokens`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        document.querySelector(".token-count").textContent =
-          `${data.token_usage} tokens`;
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
+    let tokens = calculateTokens(prompt);
+    document.querySelector(".token-count").textContent = `${tokens}`;
   }
 </script>
 
-<div class="expandable-input mt-4 relative">
+<div class="expandable-input relative">
+  <div class="py-3 px-1 rounded-md text-xs">
+    Agent status:
+    {#if $agentState !== null}
+      {#if $agentState.agent_is_active}
+        <span class="text-green-500">Active</span>
+      {:else}
+        <span class="text-orange-600">Inactive</span>
+      {/if}
+    {:else}
+      Deactive
+    {/if}
+  </div>
+
   <textarea
     id="message-input"
-    class="w-full p-2 bg-slate-800 rounded pr-20"
+    class="w-full p-4 font-medium focus:text-foreground rounded-xl outline-none h-28 pr-20 bg-secondary"
     placeholder="Type your message..."
     bind:value={messageInput}
-    on:input={calculateTokens}
+    on:input={setTokenSize}
     on:keydown={(e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -64,24 +81,23 @@
       }
     }}
   ></textarea>
-  <div class="token-count absolute right-2 bottom-2 text-gray-400 text-xs">
-    0 tokens
-  </div>
-  <button
-    id="send-message-btn"
-    class={`px-4 py-2 rounded w-full mt-2 ${isAgentActive ? "bg-slate-800" : "bg-indigo-700"}`}
+
+  <button 
     on:click={handleSendMessage}
     disabled={isAgentActive}
+    class="absolute text-secondary bg-primary p-2 right-4 bottom-6 rounded-full"
   >
-    {@html isAgentActive ? "<i>Agent is busy...</i>" : "Send"}
+  {@html Icons.CornerDownLeft} 
   </button>
+  <p class="absolute text-tertiary p-2 right-4 top-12">
+    <span class="token-count">0</span>
+  </p>
 </div>
 
 <style>
   .expandable-input textarea {
     min-height: 60px;
     max-height: 200px;
-    overflow-y: hidden;
     resize: none;
   }
 </style>

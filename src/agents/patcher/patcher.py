@@ -69,15 +69,14 @@ class Patcher:
         project_name = project_name.lower().replace(" ", "-")
 
         for file in response:
-            file_path = f"{self.project_dir}/{project_name}/{file['file']}"
-            file_path_dir = file_path[:file_path.rfind("/")]
+            file_path = os.path.join(self.project_dir, project_name, file['file'])
+            file_path_dir = os.path.dirname(file_path)
             os.makedirs(file_path_dir, exist_ok=True)
-
-            with open(file_path, "w") as f:
+    
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(file["code"])
     
         return file_path_dir
-
     def get_project_path(self, project_name: str):
         project_name = project_name.lower().replace(" ", "-")
         return f"{self.project_dir}/{project_name}"
@@ -87,9 +86,9 @@ class Patcher:
         return f"~~~\n{response}\n~~~"
 
     def emulate_code_writing(self, code_set: list, project_name: str):
-        for file in code_set:
-            file = file["file"]
-            code = file["code"]
+        for current_file in code_set:
+            file = current_file["file"]
+            code = current_file["code"]
 
             new_state = AgentState().new_state()
             new_state["internal_monologue"] = "Writing code..."

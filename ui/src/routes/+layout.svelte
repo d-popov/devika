@@ -1,9 +1,15 @@
 <script>
   import Sidebar from "$lib/components/Sidebar.svelte";
+  import { Toaster } from "$lib/components/ui/sonner";
+  import { ModeWatcher } from "mode-watcher";
   import "../app.pcss";
 </script>
 
-<main class="h-dvh ml-20">
-  <Sidebar />
-  <slot />
+<main>
+  <div class="h-dvh w-full flex">
+      <Toaster />
+      <ModeWatcher />
+      <Sidebar />
+      <slot />
+  </div>
 </main>
