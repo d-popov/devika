@@ -66,10 +66,10 @@ class Agent:
         self.engine = search_engine
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
-    async def open_page(self, project_name, pdf_download_url):
+    async def open_page(self, project_name, url):
         browser = await Browser().start()
 
-        await browser.go_to(pdf_download_url)
+        await browser.go_to(url)
         _, raw = await browser.screenshot(project_name)
         data = await browser.extract_text()
         await browser.close()
@@ -79,9 +79,7 @@ class Agent:
     def search_queries(self, queries: list, project_name: str) -> dict:
         results = {}
 
-
         knowledge_base = KnowledgeBase()
-        web_search = None
 
         if self.engine == "bing":
             web_search = BingSearch()
@@ -107,7 +105,8 @@ class Agent:
 
             link = web_search.get_first_link()
             print("\nLink :: ", link, '\n')
-
+            if not link:
+                continue
             browser, raw, data = loop.run_until_complete(self.open_page(project_name, link))
             emit_agent("screenshot", {"data": raw, "project_name": project_name}, False)
             results[query] = self.formatter.execute(data, project_name)
@@ -151,7 +150,7 @@ class Agent:
                     project_name_space_url)
                 response = f"I have generated the PDF document. You can download it from here: {pdf_download_url}"
 
-                asyncio.run(self.open_page(project_name, pdf_download_url))
+                #asyncio.run(self.open_page(project_name, pdf_download_url))
 
                 self.project_manager.add_message_from_devika(project_name, response)
 
@@ -218,7 +217,7 @@ class Agent:
             deploy_url = deploy_metadata["deploy_url"]
 
             response = {
-                "message": "Done! I deployed your project on Netflify.",
+                "message": "Done! I deployed your project on Netlify.",
                 "deploy_url": deploy_url
             }
             response = json.dumps(response, indent=4)
@@ -257,8 +256,7 @@ class Agent:
                 project_name_space_url)
             response = f"I have generated the PDF document. You can download it from here: {pdf_download_url}"
 
-            self.browser.go_to(pdf_download_url)
-            self.browser.screenshot(project_name)
+            #asyncio.run(self.open_page(project_name, pdf_download_url))
 
             self.project_manager.add_message_from_devika(project_name, response)
 
